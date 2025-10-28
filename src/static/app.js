@@ -552,6 +552,14 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")}
         </ul>
       </div>
+      <div class="social-share-buttons">
+        <button class="share-button" data-activity-name="${name}" title="Share this activity">
+          📤 Share
+        </button>
+        <button class="copy-link-button" data-activity-name="${name}" title="Copy link to clipboard">
+          🔗 Copy Link
+        </button>
+      </div>
       <div class="activity-card-actions">
         ${
           currentUser
@@ -585,6 +593,22 @@ document.addEventListener("DOMContentLoaded", () => {
           openRegistrationModal(name);
         });
       }
+    }
+
+    // Add click handlers for social sharing buttons
+    const shareButton = activityCard.querySelector(".share-button");
+    const copyLinkButton = activityCard.querySelector(".copy-link-button");
+    
+    if (shareButton) {
+      shareButton.addEventListener("click", () => {
+        handleShare(name, details);
+      });
+    }
+    
+    if (copyLinkButton) {
+      copyLinkButton.addEventListener("click", () => {
+        handleCopyLink();
+      });
     }
 
     activitiesList.appendChild(activityCard);
@@ -854,6 +878,170 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error signing up:", error);
     }
   });
+
+  // Handle social sharing
+  async function handleShare(activityName, details) {
+    const shareUrl = `${window.location.origin}${window.location.pathname}`;
+    const shareTitle = `${activityName} - Mergington High School`;
+    const shareText = `Check out this activity: ${activityName}\n${details.description}\nSchedule: ${formatSchedule(details)}`;
+
+    // Try to use the Web Share API if available (mainly on mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        showMessage("Activity shared successfully!", "success");
+      } catch (error) {
+        // User cancelled or sharing failed
+        if (error.name !== "AbortError") {
+          console.error("Error sharing:", error);
+          showSharingModal(activityName, details);
+        }
+      }
+    } else {
+      // Fallback: show modal with sharing options
+      showSharingModal(activityName, details);
+    }
+  }
+
+  // Show modal with sharing options
+  function showSharingModal(activityName, details) {
+    // Create sharing modal if it doesn't exist
+    let sharingModal = document.getElementById("sharing-modal");
+    if (!sharingModal) {
+      sharingModal = document.createElement("div");
+      sharingModal.id = "sharing-modal";
+      sharingModal.className = "modal hidden";
+      sharingModal.innerHTML = `
+        <div class="modal-content">
+          <span class="close-sharing-modal">&times;</span>
+          <h3>Share Activity</h3>
+          <div id="sharing-options" class="sharing-options">
+            <!-- Sharing options will be populated here -->
+          </div>
+        </div>
+      `;
+      document.body.appendChild(sharingModal);
+
+      // Add close handler
+      const closeButton = sharingModal.querySelector(".close-sharing-modal");
+      closeButton.addEventListener("click", () => {
+        sharingModal.classList.remove("show");
+        setTimeout(() => {
+          sharingModal.classList.add("hidden");
+        }, 300);
+      });
+
+      // Close when clicking outside
+      sharingModal.addEventListener("click", (event) => {
+        if (event.target === sharingModal) {
+          sharingModal.classList.remove("show");
+          setTimeout(() => {
+            sharingModal.classList.add("hidden");
+          }, 300);
+        }
+      });
+    }
+
+    // Populate sharing options
+    const shareUrl = encodeURIComponent(
+      `${window.location.origin}${window.location.pathname}`
+    );
+    const shareTitle = encodeURIComponent(
+      `${activityName} - Mergington High School`
+    );
+    const shareText = encodeURIComponent(
+      `Check out this activity: ${activityName} - ${details.description}`
+    );
+
+    const sharingOptions = document.getElementById("sharing-options");
+    sharingOptions.innerHTML = `
+      <a href="https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}" 
+         target="_blank" 
+         class="share-option twitter">
+        <span class="share-icon">🐦</span>
+        Share on Twitter
+      </a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=${shareUrl}" 
+         target="_blank" 
+         class="share-option facebook">
+        <span class="share-icon">📘</span>
+        Share on Facebook
+      </a>
+      <a href="mailto:?subject=${shareTitle}&body=${shareText}%20${shareUrl}" 
+         class="share-option email">
+        <span class="share-icon">📧</span>
+        Share via Email
+      </a>
+      <button class="share-option copy">
+        <span class="share-icon">🔗</span>
+        Copy Link
+      </button>
+    `;
+
+    // Add event listener for copy button
+    const copyButton = sharingOptions.querySelector(".share-option.copy");
+    if (copyButton) {
+      copyButton.addEventListener("click", () => {
+        handleCopyLink();
+      });
+    }
+
+    // Show modal
+    sharingModal.classList.remove("hidden");
+    setTimeout(() => {
+      sharingModal.classList.add("show");
+    }, 10);
+  }
+
+  // Handle copy link to clipboard
+  function handleCopyLink() {
+    const shareUrl = `${window.location.origin}${window.location.pathname}`;
+
+    // Try to use the Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(() => {
+          showMessage("Link copied to clipboard!", "success");
+        })
+        .catch((error) => {
+          console.error("Error copying to clipboard:", error);
+          fallbackCopyToClipboard(shareUrl);
+        });
+    } else {
+      // Fallback for older browsers
+      fallbackCopyToClipboard(shareUrl);
+    }
+  }
+
+  // Fallback method for copying to clipboard (uses deprecated document.execCommand for legacy browser support)
+  function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    try {
+      // Note: document.execCommand is deprecated but kept for legacy browser support
+      const successful = document.execCommand("copy");
+      if (successful) {
+        showMessage("Link copied to clipboard!", "success");
+      } else {
+        showMessage("Failed to copy link. Please copy manually.", "error");
+      }
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+      showMessage("Failed to copy link. Please copy manually.", "error");
+    }
+
+    document.body.removeChild(textArea);
+  }
 
   // Expose filter functions to window for future UI control
   window.activityFilters = {
