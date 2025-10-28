@@ -976,14 +976,19 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="share-icon">📧</span>
         Share via Email
       </a>
-      <button class="share-option copy" onclick="handleCopyLink('${activityName.replace(
-        /'/g,
-        "\\'"
-      )}')">
+      <button class="share-option copy">
         <span class="share-icon">🔗</span>
         Copy Link
       </button>
     `;
+
+    // Add event listener for copy button
+    const copyButton = sharingOptions.querySelector(".share-option.copy");
+    if (copyButton) {
+      copyButton.addEventListener("click", () => {
+        handleCopyLink();
+      });
+    }
 
     // Show modal
     sharingModal.classList.remove("hidden");
@@ -993,7 +998,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Handle copy link to clipboard
-  function handleCopyLink(activityName) {
+  function handleCopyLink() {
     const shareUrl = `${window.location.origin}${window.location.pathname}`;
 
     // Try to use the Clipboard API
@@ -1013,7 +1018,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Fallback method for copying to clipboard
+  // Fallback method for copying to clipboard (uses deprecated document.execCommand for legacy browser support)
   function fallbackCopyToClipboard(text) {
     const textArea = document.createElement("textarea");
     textArea.value = text;
@@ -1023,6 +1028,7 @@ document.addEventListener("DOMContentLoaded", () => {
     textArea.select();
 
     try {
+      // Note: document.execCommand is deprecated but kept for legacy browser support
       const successful = document.execCommand("copy");
       if (successful) {
         showMessage("Link copied to clipboard!", "success");
@@ -1036,9 +1042,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.body.removeChild(textArea);
   }
-
-  // Expose sharing functions to window for inline onclick handlers
-  window.handleCopyLink = handleCopyLink;
 
   // Expose filter functions to window for future UI control
   window.activityFilters = {
