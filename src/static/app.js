@@ -607,7 +607,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     if (copyLinkButton) {
       copyLinkButton.addEventListener("click", () => {
-        handleCopyLink(name);
+        handleCopyLink();
       });
     }
 
